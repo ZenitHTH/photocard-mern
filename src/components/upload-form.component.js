@@ -8,8 +8,8 @@ const UploadFrom = () => {
 
   const post = () => {
     const data = new FormData();
-    data.append("myImage", image);
-    data.append("name", name);
+    data.append("image", image);
+    data.append("title", name);
     axios
       .post("http://127.0.0.1:4000/", data)
       .then((res) => {
