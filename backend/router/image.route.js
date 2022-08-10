@@ -1,17 +1,19 @@
 const express = require("express");
 const multer = require("multer");
 const fs = require("fs");
+const uuid = require("uuid");
 
 const router = express.Router();
 
 const imageSchema = require("../models/image.db");
+const path = require("path");
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads");
+    cb(null, "public/uploads");
   },
   filename: (req, file, cb) => {
-    cb(null, file.fieldname + "-" + Date.now());
-  },
+    cb(null, `${uuid.v4()}.${file.mimetype.split("/")[1]}`);
+  }
 });
 const upload = multer({ storage: storage });
 
@@ -25,15 +27,16 @@ router
       res.json(data);
     });
   })
-  .post(upload.single("myImage"), (req, res) => {
-    const img = fs.readFileSync(req.file.path);
-    const encode_img = img.toString("base64");
-    const schemaImg = {
-      name: req.body.name,
-      img: {
-        contnetType: req.file.mimetype,
-        data: Buffer.from(encode_img, "base64"),
-      },
+  .post(upload.single("image"), (req, res, next) => {
+    if (!req.file) {
+      const error = new Error("Please upload a file");
+      error.httpStatusCode = 400;
+      return next(error);
+    } else {
+    
+     const schemaImg = {
+      name: req.file.filename,
+      title:req.body.title
     };
     imageSchema.create(schemaImg, (err, result) => {
       if (err) {
@@ -41,11 +44,12 @@ router
       } else {
         console.log("Saved to database");
         res.json(schemaImg);
-        fs.unlink(req.file.path, (err) => {
-          if (err) console.log(err);
-        });
       }
     });
+  }
   });
 
+router.route("/:filename").get((req, res) => {
+  res.sendFile(path.resolve(`./public/uploads/${req.params.filename}`));
+});
 module.exports = router;
